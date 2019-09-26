@@ -1,26 +1,36 @@
 #Process level parallelism for shell commands
-import glob
 import sys
 import subprocess as sp
 import multiprocessing as mp
+import concurrent.futures
 
-def work(in_file):
+def read_file(in_file, queue):
     """Defines the work unit on an input file"""
     for line in open(in_file):
+        if line[0] == '#' or line[0] == '\n':
+            continue
         print (line)
-        sp.check_output(line, shell=True)
-    return 0
+        queue.put(line)
+    return 0;
+
+def do_work(command):
+    sp.check_output(command, shell=True);
+    return 0;
 
 if __name__ == '__main__':
     #Specify files to be worked with typical shell syntax and glob module
-    #file_path = './*.data'
-    #tasks = glob.glob(file_path)
-    tasks = glob.glob(sys.argv[1])
+    tasks = sys.argv[1]
+    queue = mp.Queue()
     
+    read_file(tasks, queue);
+
     #Set up the parallel task pool to use all available processors
     count = mp.cpu_count()
     print ("cpu_count: ", count)
-    pool = mp.Pool(processes=count)
+    #pool = mp.Pool(processes=count);
 
     #Run the jobs
-    pool.map(work, tasks)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=count) as executor:
+        while(queue.empty() == False):
+            executor.map(do_work,iter(queue.get, None)) 
+
