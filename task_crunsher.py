@@ -11,10 +11,16 @@ def read_file(in_file, queue):
             continue
         print (line)
         queue.put(line)
+    queue.put(None)
     return 0;
 
-def do_work(command):
-    sp.check_output(command, shell=True);
+def do_work(queue):
+    while True:
+        command = queue.get()
+        if (command is None):
+            break;
+        print ("processing: ", command, " on processor: ");#, multiprocessing.current_process().name)
+        sp.check_output(command, shell=True);
     return 0;
 
 if __name__ == '__main__':
@@ -27,10 +33,8 @@ if __name__ == '__main__':
     #Set up the parallel task pool to use all available processors
     count = mp.cpu_count()
     print ("cpu_count: ", count)
-    #pool = mp.Pool(processes=count);
 
     #Run the jobs
-    with concurrent.futures.ThreadPoolExecutor(max_workers=count) as executor:
-        while(queue.empty() == False):
-            executor.map(do_work,iter(queue.get, None)) 
+    with concurrent.futures.ThreadPoolExecutor(max_workers=count) as executor:     
+        executor.submit(do_work,queue) 
 
